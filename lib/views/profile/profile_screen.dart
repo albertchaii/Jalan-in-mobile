@@ -175,6 +175,7 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildHistoryItem(BuildContext context, ReportModel report) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () {
         Navigator.push(
           context,
