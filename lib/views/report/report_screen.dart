@@ -253,13 +253,7 @@ class _ReportScreenState extends State<ReportScreen> {
                           );
                           return;
                         }
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Laporan berhasil dikirim!')),
-                        );
-                        setState(() {
-                          _isCaptured = false;
-                          _descController.clear();
-                        });
+                        _showSuccessDialog();
                       },
                       child: const Text('Kirim Laporan'),
                     ),
@@ -284,6 +278,62 @@ class _ReportScreenState extends State<ReportScreen> {
         ),
         child: Icon(icon, color: Colors.white),
       ),
+    );
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check_circle, color: Colors.green, size: 64),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Laporan Berhasil!',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Terima kasih! Laporan Anda telah masuk ke sistem dan akan segera ditindaklanjuti.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Close dialog
+                    setState(() {
+                      _isCaptured = false;
+                      _descController.clear();
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 48),
+                  ),
+                  child: const Text('Kembali ke Laporan Baru'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

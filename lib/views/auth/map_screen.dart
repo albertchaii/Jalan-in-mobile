@@ -3,9 +3,71 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:jalan_in/core/theme/app_theme.dart';
 import 'package:jalan_in/widgets/notification_dialog.dart';
+import 'package:jalan_in/models/report_model.dart';
 
-class MapScreen extends StatelessWidget {
+class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
+
+  @override
+  State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> {
+  ReportModel? _selectedReport;
+
+  final List<ReportModel> _reports = [
+    ReportModel(
+      id: '1',
+      title: 'Lubang Besar di Jalan Sudirman',
+      address: 'Jalan Sudirman, Jakarta Pusat',
+      status: 'DILAPORKAN',
+      statusColor: AppTheme.statusDilaporkan,
+      statusBgColor: const Color(0xFFFDECE9),
+      timeReported: 'Dilaporkan 2 jam lalu',
+      imageUrl: 'https://picsum.photos/200?random=4',
+      location: const LatLng(-6.200000, 106.816666),
+    ),
+    ReportModel(
+      id: '2',
+      title: 'Trotorar retak di Kemang',
+      address: 'Jalan Kemang Raya, Jakarta Selatan',
+      status: 'DIPROSES',
+      statusColor: AppTheme.statusDiproses,
+      statusBgColor: const Color(0xFFE3F2FD),
+      timeReported: 'Dilaporkan 5 jam lalu',
+      imageUrl: 'https://picsum.photos/200?random=5',
+      location: const LatLng(-6.205000, 106.820000),
+    ),
+    ReportModel(
+      id: '3',
+      title: 'Zebra cross pudar di Thamrin',
+      address: 'Jalan MH Thamrin, Jakarta Pusat',
+      status: 'SELESAI',
+      statusColor: AppTheme.statusSelesai,
+      statusBgColor: const Color(0xFFE8F5E9),
+      timeReported: 'Selesai 1 hari lalu',
+      imageUrl: 'https://picsum.photos/200?random=6',
+      location: const LatLng(-6.195000, 106.810000),
+    ),
+    ReportModel(
+      id: '4',
+      title: 'Lampu jalan mati',
+      address: 'Jalan Gatot Subroto, Jakarta',
+      status: 'DISURVEI',
+      statusColor: AppTheme.statusDisurvei,
+      statusBgColor: const Color(0xFFFFF9C4),
+      timeReported: 'Dilaporkan 1 hari lalu',
+      imageUrl: 'https://picsum.photos/200?random=7',
+      location: const LatLng(-6.198000, 106.825000),
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Default select the first report
+    _selectedReport = _reports[0];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,24 +106,37 @@ class MapScreen extends StatelessWidget {
                 subdomains: const ['a', 'b', 'c'],
               ),
               MarkerLayer(
-                markers: [
-                  Marker(
-                    point: const LatLng(-6.200000, 106.816666),
-                    child: const Icon(Icons.location_on, color: AppTheme.statusDilaporkan, size: 40),
-                  ),
-                  Marker(
-                    point: const LatLng(-6.205000, 106.820000),
-                    child: const Icon(Icons.location_on, color: AppTheme.statusDiproses, size: 40),
-                  ),
-                  Marker(
-                    point: const LatLng(-6.195000, 106.810000),
-                    child: const Icon(Icons.location_on, color: AppTheme.statusSelesai, size: 40),
-                  ),
-                  Marker(
-                    point: const LatLng(-6.198000, 106.825000),
-                    child: const Icon(Icons.location_on, color: AppTheme.statusDisurvei, size: 40),
-                  ),
-                ],
+                markers: _reports.map((report) {
+                  return Marker(
+                    point: report.location,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedReport = report;
+                        });
+                      },
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(
+                            Icons.location_on,
+                            color: report.statusColor,
+                            size: _selectedReport?.id == report.id ? 50 : 40,
+                          ),
+                          if (_selectedReport?.id == report.id)
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                            )
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
             ],
           ),
@@ -142,6 +217,8 @@ class MapScreen extends StatelessWidget {
   }
 
   Widget _buildBottomCard(BuildContext context) {
+    if (_selectedReport == null) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -173,16 +250,21 @@ class MapScreen extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(12),
-                  image: const DecorationImage(
-                    image: NetworkImage('https://picsum.photos/200?random=4'),
-                    fit: BoxFit.cover,
-                  ),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  _selectedReport!.imageUrl,
+                  width: 80,
+                  height: 80,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 80,
+                      height: 80,
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.broken_image, color: Colors.grey),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 16),
@@ -193,34 +275,39 @@ class MapScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppTheme.inputBackgroundColor,
+                        color: _selectedReport!.statusBgColor,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        'MASALAH MENDESAK',
+                        _selectedReport!.status,
                         style: TextStyle(
-                          color: AppTheme.primaryColor,
+                          color: _selectedReport!.statusColor,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Lubang Besar di Jalan Sudirman',
-                      style: TextStyle(
+                    Text(
+                      _selectedReport!.title,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Row(
-                      children: const [
-                        Icon(Icons.access_time, size: 14, color: Colors.grey),
-                        SizedBox(width: 4),
-                        Text(
-                          'Dilaporkan 2 jam lalu',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                      children: [
+                        const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            _selectedReport!.timeReported,
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
