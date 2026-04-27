@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:jalan_in/core/theme/app_theme.dart';
 import 'package:jalan_in/widgets/notification_dialog.dart';
 import 'package:jalan_in/models/report_model.dart';
+import 'package:jalan_in/views/report/report_detail_screen.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -321,7 +322,14 @@ class _MapScreenState extends State<MapScreen> {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ReportDetailScreen(report: _selectedReport!),
+                      ),
+                    );
+                  },
                   icon: const Icon(Icons.remove_red_eye),
                   label: const Text('Lihat Detail'),
                 ),

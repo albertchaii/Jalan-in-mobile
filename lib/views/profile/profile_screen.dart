@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:jalan_in/core/theme/app_theme.dart';
 import 'package:jalan_in/views/auth/login_screen.dart';
 import 'package:jalan_in/widgets/notification_dialog.dart';
+import 'package:jalan_in/models/report_model.dart';
+import 'package:jalan_in/views/report/report_detail_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -120,31 +123,46 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   _buildHistoryItem(
-                    status: 'DILAPORKAN',
-                    statusColor: AppTheme.statusDilaporkan,
-                    statusBgColor: const Color(0xFFFDECE9),
-                    title: 'Lubang besar di jalan...',
-                    address: 'Jakarta\nPusat',
-                    date: '24 OKT 2023',
-                    imageUrl: 'https://picsum.photos/200?random=1',
+                    context,
+                    ReportModel(
+                      id: 'h1',
+                      status: 'DILAPORKAN',
+                      statusColor: AppTheme.statusDilaporkan,
+                      statusBgColor: const Color(0xFFFDECE9),
+                      title: 'Lubang besar di jalan...',
+                      address: 'Jakarta Pusat',
+                      timeReported: '24 OKT 2023',
+                      imageUrl: 'https://picsum.photos/200?random=1',
+                      location: const LatLng(-6.200, 106.816),
+                    ),
                   ),
                   _buildHistoryItem(
-                    status: 'DIPROSES',
-                    statusColor: AppTheme.statusDiproses,
-                    statusBgColor: const Color(0xFFE3F2FD),
-                    title: 'Trotorar retak di...',
-                    address: 'Jakarta Selatan',
-                    date: '18 OKT 2023',
-                    imageUrl: 'https://picsum.photos/200?random=2',
+                    context,
+                    ReportModel(
+                      id: 'h2',
+                      status: 'DIPROSES',
+                      statusColor: AppTheme.statusDiproses,
+                      statusBgColor: const Color(0xFFE3F2FD),
+                      title: 'Trotorar retak di...',
+                      address: 'Jakarta Selatan',
+                      timeReported: '18 OKT 2023',
+                      imageUrl: 'https://picsum.photos/200?random=2',
+                      location: const LatLng(-6.205, 106.820),
+                    ),
                   ),
                   _buildHistoryItem(
-                    status: 'SELESAI',
-                    statusColor: AppTheme.statusSelesai,
-                    statusBgColor: const Color(0xFFE8F5E9),
-                    title: 'Zebra cross pudar di...',
-                    address: 'Jakarta Timur',
-                    date: '12 OKT 2023',
-                    imageUrl: 'https://picsum.photos/200?random=3',
+                    context,
+                    ReportModel(
+                      id: 'h3',
+                      status: 'SELESAI',
+                      statusColor: AppTheme.statusSelesai,
+                      statusBgColor: const Color(0xFFE8F5E9),
+                      title: 'Zebra cross pudar di...',
+                      address: 'Jakarta Timur',
+                      timeReported: '12 OKT 2023',
+                      imageUrl: 'https://picsum.photos/200?random=3',
+                      location: const LatLng(-6.195, 106.810),
+                    ),
                   ),
                 ],
               ),
@@ -155,99 +173,101 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHistoryItem({
-    required String status,
-    required Color statusColor,
-    required Color statusBgColor,
-    required String title,
-    required String address,
-    required String date,
-    required String imageUrl,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.inputBackgroundColor.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              imageUrl,
-              width: 80,
-              height: 80,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: 80,
-                  height: 80,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.broken_image, color: Colors.grey),
-                );
-              },
-            ),
+  Widget _buildHistoryItem(BuildContext context, ReportModel report) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ReportDetailScreen(report: report),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: statusBgColor,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        status,
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.inputBackgroundColor.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                report.imageUrl,
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: 80,
+                    height: 80,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.broken_image, color: Colors.grey),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: report.statusBgColor,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          report.status,
+                          style: TextStyle(
+                            color: report.statusColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                    Text(
-                      date,
-                      style: const TextStyle(fontSize: 10, color: Colors.grey),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        address.replaceAll('\n', ' '),
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Text(
+                        report.timeReported,
+                        style: const TextStyle(fontSize: 10, color: Colors.grey),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    report.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          report.address.replaceAll('\n', ' '),
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          const Icon(Icons.chevron_right, color: Colors.grey),
-        ],
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, color: Colors.grey),
+          ],
+        ),
       ),
     );
   }
