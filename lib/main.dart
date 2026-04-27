@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'views/auth/login_screen.dart'; 
-import 'views/auth/map_screen.dart';
+import 'views/auth/login_screen.dart';
+import 'package:jalan_in/core/theme/app_theme.dart';
 
 void main() {
   runApp(const MyApp());
@@ -14,10 +14,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false, // Menghilangkan banner "DEBUG" di pojok kanan atas
       title: 'jalan.in',
-      theme: ThemeData(
-        fontFamily: 'Roboto', 
-      ),
-      home: const MapScreen(), // Memanggil layar login
+      theme: AppTheme.lightTheme,
+      home: const LoginScreen(), // Memanggil layar login
     );
   }
 }

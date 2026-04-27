@@ -1,3 +1,4 @@
+import 'package:jalan_in/views/main/main_layout.dart';
 import 'package:flutter/material.dart';
 import 'register_screen.dart'; // Import layar register di sini
 
@@ -138,7 +139,7 @@ class LoginScreen extends StatelessWidget {
                   height: 56,
                   child: ElevatedButton(
                     onPressed: () {
-                      // TODO: Panggil fungsi login dari AuthController di sini
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainLayout()));
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryRed,
