@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart'; // Package khusus koordinat untuk flutter_map
+import 'package:jalan_in/views/notifications/notifications_popup.dart';
+import 'package:provider/provider.dart';
+import 'package:jalan_in/providers/report_provider.dart';
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key});
+  const MapScreen({super.key, this.onGoToReport});
+
+  final VoidCallback? onGoToReport;
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -13,10 +18,139 @@ class _MapScreenState extends State<MapScreen> {
   final Color primaryRed = const Color(0xFF8A0B14);
   final Color bgPink = const Color(0xFFFEF9F9);
   
-  // Koordinat default (Telkom University / Bandung Raya)
-  final LatLng _center = const LatLng(-6.974001, 107.630348);
+  // Koordinat default (Tengah Indonesia)
+  final LatLng _center = const LatLng(-0.789275, 113.921327);
 
-  bool _showDetailCard = true; // Set true untuk preview Card di bawah
+  Map<String, dynamic>? _selectedReport;
+  Set<String> _selectedStatuses = {'Dilaporkan', 'Disurvey', 'Tidak Valid', 'Diproses', 'Selesai'};
+  final MapController _mapController = MapController();
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      Provider.of<ReportProvider>(context, listen: false).fetchReportsMap();
+    });
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Dilaporkan': return Colors.red;
+      case 'Disurvey': return Colors.amber;
+      case 'Tidak Valid': return Colors.blueGrey.shade700;
+      case 'Diproses': return Colors.blue.shade900;
+      case 'Selesai': return Colors.green.shade600;
+      default: return Colors.grey;
+    }
+  }
+
+  void _showFilterDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Filter',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setStateDialog(() {
+                              _selectedStatuses.clear();
+                            });
+                            setState(() {}); // trigger rebuild map
+                          },
+                          child: const Text(
+                            'Bersihkan Semua',
+                            style: TextStyle(color: Color(0xFF8A0B14), fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'STATUS KERUSAKAN',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey.shade500, letterSpacing: 1.2),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildFilterCheckbox('Dilaporkan', Colors.red, setStateDialog),
+                    const SizedBox(height: 8),
+                    _buildFilterCheckbox('Disurvey', Colors.amber, setStateDialog),
+                    const SizedBox(height: 8),
+                    _buildFilterCheckbox('Tidak Valid', Colors.blueGrey.shade700, setStateDialog),
+                    const SizedBox(height: 8),
+                    _buildFilterCheckbox('Diproses', Colors.blue, setStateDialog),
+                    const SizedBox(height: 8),
+                    _buildFilterCheckbox('Selesai', Colors.green, setStateDialog),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterCheckbox(String status, Color color, StateSetter setStateDialog) {
+    bool isSelected = _selectedStatuses.contains(status);
+    return InkWell(
+      onTap: () {
+        setStateDialog(() {
+          if (isSelected) {
+            _selectedStatuses.remove(status);
+          } else {
+            _selectedStatuses.add(status);
+          }
+        });
+        setState(() {}); // trigger rebuild map
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.blue.shade600 : Colors.transparent,
+                border: Border.all(color: isSelected ? Colors.blue.shade600 : Colors.grey.shade500, width: 2),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: isSelected ? const Icon(Icons.check, size: 20, color: Colors.white) : null,
+            ),
+            const SizedBox(width: 16),
+            Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              status,
+              style: TextStyle(fontSize: 18, color: Colors.grey.shade800),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,8 +175,12 @@ class _MapScreenState extends State<MapScreen> {
         centerTitle: true,
         actions: [
           IconButton(
+            icon: const Icon(Icons.filter_list, color: Color(0xFF8A0B14)),
+            onPressed: () => _showFilterDialog(context),
+          ),
+          IconButton(
             icon: const Icon(Icons.notifications_none, color: Color(0xFF8A0B14)),
-            onPressed: () {},
+            onPressed: () => showNotificationsPopup(context),
           ),
         ],
       ),
@@ -51,9 +189,10 @@ class _MapScreenState extends State<MapScreen> {
         children: [
           // Lapis 1: flutter_map (Leaflet)
           FlutterMap(
+            mapController: _mapController,
             options: MapOptions(
               initialCenter: _center,
-              initialZoom: 15.0,
+              initialZoom: 5.0,
               // Batasi pergerakan peta agar tidak terlalu jauh (opsional)
               interactionOptions: const InteractionOptions(
                 flags: InteractiveFlag.all & ~InteractiveFlag.rotate, // Matikan rotasi agar peta tegak
@@ -68,23 +207,34 @@ class _MapScreenState extends State<MapScreen> {
                 // dari penyedia pihak ketiga seperti Mapbox atau Stadia Maps secara gratis.
               ),
               // Layer untuk menaruh pin / marker
-              MarkerLayer(
-                markers: [
-                  // Contoh Marker Status Dilaporkan (Merah)
-                  Marker(
-                    point: const LatLng(-6.974001, 107.630348),
-                    width: 40,
-                    height: 40,
-                    child: const Icon(Icons.location_on, color: Colors.red, size: 40),
-                  ),
-                  // Contoh Marker Status Disurvei (Kuning)
-                  Marker(
-                    point: const LatLng(-6.972000, 107.632000),
-                    width: 40,
-                    height: 40,
-                    child: const Icon(Icons.location_on, color: Colors.amber, size: 40),
-                  ),
-                ],
+              Consumer<ReportProvider>(
+                builder: (context, provider, child) {
+                  return MarkerLayer(
+                    markers: provider.mapReports.where((report) {
+                      final String status = report['status'] ?? 'Dilaporkan';
+                      return _selectedStatuses.contains(status);
+                    }).map((report) {
+                      final double lat = double.tryParse(report['latitude'].toString()) ?? 0.0;
+                      final double lng = double.tryParse(report['longitude'].toString()) ?? 0.0;
+                      final String status = report['status'] ?? 'Dilaporkan';
+                      return Marker(
+                        point: LatLng(lat, lng),
+                        width: 40,
+                        height: 40,
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedReport = report;
+                            });
+                            // Zoom to marker for street detail
+                            _mapController.move(LatLng(lat, lng), 17.0);
+                          },
+                          child: Icon(Icons.location_on, color: _getStatusColor(status), size: 40)
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
               ),
             ],
           ),
@@ -117,31 +267,66 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
 
-          // Lapis 3: Tombol Plus Besar
+          // Lapis 3: Tombol Aksi Kanan Atas
           Positioned(
             top: 16,
             right: 16,
-            child: Container(
-              height: 56,
-              width: 56,
-              decoration: BoxDecoration(
-                color: primaryRed,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(color: primaryRed.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 4))
-                ],
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.add, color: Colors.white, size: 32),
-                onPressed: () {
-                  // TODO: Navigasi ke CameraScreen
-                },
-              ),
+            child: Column(
+              children: [
+                // Tombol Plus Besar
+                Container(
+                  height: 56,
+                  width: 56,
+                  decoration: BoxDecoration(
+                    color: primaryRed,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(color: primaryRed.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 4))
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.add, color: Colors.white, size: 32),
+                    onPressed: () {
+                      widget.onGoToReport?.call();
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Tombol Zoom (In/Out)
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.add, color: Colors.black87),
+                        onPressed: () {
+                          final currentZoom = _mapController.camera.zoom;
+                          _mapController.move(_mapController.camera.center, currentZoom + 1);
+                        },
+                      ),
+                      Container(height: 1, width: 30, color: Colors.grey.shade300),
+                      IconButton(
+                        icon: const Icon(Icons.remove, color: Colors.black87),
+                        onPressed: () {
+                          final currentZoom = _mapController.camera.zoom;
+                          _mapController.move(_mapController.camera.center, currentZoom - 1);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
 
           // Lapis 4: Kartu Detail Bottom Sheet
-          if (_showDetailCard)
+          if (_selectedReport != null)
             Positioned(
               bottom: 16,
               left: 16,
@@ -158,26 +343,60 @@ class _MapScreenState extends State<MapScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          alignment: Alignment.center,
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedReport = null;
+                              });
+                            },
+                            child: const Icon(Icons.close, color: Colors.grey),
+                          ),
+                        ),
+                      ],
                     ),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            width: 80,
-                            height: 80,
-                            color: Colors.grey.shade300,
-                            child: const Icon(Icons.image, color: Colors.grey),
-                          ),
+                          child: _selectedReport!['photo_url'] != null
+                              ? Image.network(
+                                  _selectedReport!['photo_url'],
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => Container(
+                                    width: 80,
+                                    height: 80,
+                                    color: Colors.grey.shade300,
+                                    child: const Icon(Icons.image, color: Colors.grey),
+                                  ),
+                                )
+                              : Container(
+                                  width: 80,
+                                  height: 80,
+                                  color: Colors.grey.shade300,
+                                  child: const Icon(Icons.image, color: Colors.grey),
+                                ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -187,25 +406,40 @@ class _MapScreenState extends State<MapScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.red.shade50,
+                                  color: _getStatusColor(_selectedReport!['status'] ?? '').withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  'MASALAH MENDESAK',
-                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: primaryRed),
+                                  (_selectedReport!['status'] ?? 'DILAPORKAN').toString().toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 10, 
+                                    fontWeight: FontWeight.bold, 
+                                    color: _getStatusColor(_selectedReport!['status'] ?? '')
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              const Text(
-                                'Lubang Besar di\nJalan Sudirman',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, height: 1.2),
+                              Text(
+                                _selectedReport!['description'] ?? 'Tanpa deskripsi',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, height: 1.2),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 8),
                               Row(
                                 children: [
                                   Icon(Icons.access_time, size: 14, color: Colors.grey.shade600),
                                   const SizedBox(width: 4),
-                                  Text('Dilaporkan 2 jam lalu', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                  Expanded(
+                                    child: Text(
+                                      _selectedReport!['created_at'] != null 
+                                          ? 'Dilaporkan pada ${_selectedReport!['created_at'].toString().split('T')[0]}' 
+                                          : 'Waktu tidak diketahui', 
+                                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
                                 ],
                               )
                             ],

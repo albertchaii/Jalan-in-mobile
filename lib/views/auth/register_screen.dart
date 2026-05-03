@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Tambahkan import provider
+import '../../providers/auth_provider.dart'; // Sesuaikan path ini dengan lokasi AuthProvider Anda
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -16,6 +18,69 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final Color textGrey = const Color(0xFF666666);
 
   bool _obscurePassword = true;
+  bool _isLoading = false; // Status loading untuk tombol
+
+  // Controller untuk menangkap input teks
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    // Bersihkan memory saat halaman ditutup
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  // --- FUNGSI PROSES REGISTER ---
+  void _prosesRegister() async {
+    // 1. Validasi Input Kosong
+    if (_nameController.text.isEmpty || 
+        _emailController.text.isEmpty || 
+        _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Semua kolom harus diisi!')),
+      );
+      return;
+    }
+
+    // 2. Ubah status menjadi loading
+    setState(() => _isLoading = true);
+
+    try {
+      // 3. Panggil AuthProvider
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      bool sukses = await authProvider.register(
+        _nameController.text, 
+        _emailController.text, 
+        _passwordController.text
+      );
+
+      // 4. Jika sukses, kembali ke halaman login
+      if (sukses) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Pendaftaran Berhasil! Silakan Login.')),
+          );
+          Navigator.pop(context); 
+        }
+      }
+    } catch (e) {
+      // 5. Tangkap dan tampilkan error dari Laravel
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+        );
+      }
+    } finally {
+      // 6. Matikan status loading
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +95,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       ),
       body: SafeArea(
-        // Menggunakan ListView agar halaman bisa di-scroll ke bawah
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           children: [
@@ -69,6 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             // 3. Input: Nama Lengkap
             _buildInputLabel('NAMA LENGKAP'),
             _buildTextField(
+              controller: _nameController, // Pasang Controller
               hint: 'nama lengkap',
               icon: Icons.person_outline,
             ),
@@ -77,6 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             // 4. Input: Email
             _buildInputLabel('EMAIL'),
             _buildTextField(
+              controller: _emailController, // Pasang Controller
               hint: 'guardian@city.in',
               icon: Icons.alternate_email,
               keyboardType: TextInputType.emailAddress,
@@ -86,6 +152,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             // 5. Input: Kata Sandi
             _buildInputLabel('KATA SANDI'),
             TextField(
+              controller: _passwordController, // Pasang Controller
               obscureText: _obscurePassword,
               decoration: InputDecoration(
                 hintText: '••••••••',
@@ -118,9 +185,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () {
-                  // Aksi pendaftaran
-                },
+                // PANGGIL FUNGSI DI SINI
+                onPressed: _isLoading ? null : _prosesRegister,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryRed,
                   foregroundColor: Colors.white,
@@ -129,20 +195,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Text(
-                      'Buat Akun',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                // Ubah tampilan tombol saat loading
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 3,
+                        ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Text(
+                            'Buat Akun',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Icon(Icons.local_police_outlined, size: 20),
+                        ],
                       ),
-                    ),
-                    SizedBox(width: 8),
-                    Icon(Icons.local_police_outlined, size: 20),
-                  ],
-                ),
               ),
             ),
             const SizedBox(height: 40),
@@ -168,7 +244,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 30), // Ruang tambahan di bawah agar tidak terlalu mepet
+            const SizedBox(height: 30),
           ],
         ),
       ),
@@ -190,12 +266,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  // Menambahkan parameter controller pada fungsi pembuat TextField
   Widget _buildTextField({
+    required TextEditingController controller,
     required String hint,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
   }) {
     return TextField(
+      controller: controller,
       keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hint,

@@ -1,15 +1,69 @@
 import 'package:flutter/material.dart';
-import 'register_screen.dart'; // Import layar register di sini
+import 'package:provider/provider.dart'; // --- DITAMBAHKAN: Import Provider ---
+import '../../providers/auth_provider.dart'; // --- DITAMBAHKAN: Import AuthProvider ---
+import 'register_screen.dart'; 
 
-class LoginScreen extends StatelessWidget {
+// --- DIUBAH: Menjadi StatefulWidget agar bisa pakai Controller & Loading ---
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
   // Mendefinisikan warna sesuai mockup agar konsisten
-  final Color primaryRed = const Color(0xFF8A0B14); // Merah gelap
-  final Color bgPink = const Color(0xFFFEF9F9); // Latar belakang utama
-  final Color fieldBgColor = const Color(0xFFF7EBEA); // Latar belakang textfield
+  final Color primaryRed = const Color(0xFF8A0B14); 
+  final Color bgPink = const Color(0xFFFEF9F9); 
+  final Color fieldBgColor = const Color(0xFFF7EBEA); 
   final Color textDark = const Color(0xFF333333);
   final Color textGrey = const Color(0xFF666666);
+
+  // --- DITAMBAHKAN: Variabel State ---
+  bool _isLoading = false;
+  bool _obscurePassword = true; // Untuk toggle mata password
+
+  // --- DITAMBAHKAN: Controller untuk menangkap input teks ---
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  // --- DITAMBAHKAN: Fungsi Logika Login API ---
+  void _prosesLogin() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email dan kata sandi tidak boleh kosong!')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.login(
+        _emailController.text, 
+        _passwordController.text
+      );
+      // Jika sukses, main.dart akan otomatis memindahkan layar ke MainScreen
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +124,7 @@ class LoginScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 TextField(
+                  controller: _emailController, // --- DITAMBAHKAN ---
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
                     hintText: 'nama@integrity.org',
@@ -116,11 +171,24 @@ class LoginScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 TextField(
-                  obscureText: true, 
+                  controller: _passwordController, // --- DITAMBAHKAN ---
+                  obscureText: _obscurePassword, // --- DIUBAH ---
                   decoration: InputDecoration(
                     hintText: '••••••••',
                     hintStyle: TextStyle(color: Colors.grey.shade500, letterSpacing: 4.0),
                     prefixIcon: Icon(Icons.lock_outline, color: textDark.withOpacity(0.7)),
+                    // --- DITAMBAHKAN: Ikon mata untuk melihat password ---
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                        color: textDark.withOpacity(0.7),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
                     filled: true,
                     fillColor: fieldBgColor,
                     contentPadding: const EdgeInsets.symmetric(vertical: 18),
@@ -137,9 +205,8 @@ class LoginScreen extends StatelessWidget {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: Panggil fungsi login dari AuthController di sini
-                    },
+                    // --- DIUBAH: Panggil fungsi login ---
+                    onPressed: _isLoading ? null : _prosesLogin, 
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryRed,
                       foregroundColor: Colors.white,
@@ -148,20 +215,30 @@ class LoginScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Text(
-                          'Masuk',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                    // --- DIUBAH: Efek loading pada tombol ---
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 3,
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Text(
+                                'Masuk',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Icon(Icons.arrow_forward, size: 20),
+                            ],
                           ),
-                        ),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward, size: 20),
-                      ],
-                    ),
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -170,7 +247,6 @@ class LoginScreen extends StatelessWidget {
                 Center(
                   child: GestureDetector(
                     onTap: () {
-                      // NAVIGASI KE HALAMAN REGISTER DITAMBAHKAN DI SINI
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => const RegisterScreen()),
