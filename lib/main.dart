@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:jalan_in/views/auth/map_screen.dart';
 import 'package:jalan_in/views/shell/home_shell.dart';
 import 'package:provider/provider.dart';
 
@@ -59,7 +58,7 @@ class JalanInApp extends StatelessWidget {
           }
           
           // 3. Jika belum login
-          return const LoginScreen();
+          return const HomeShell();
         },
       ),
     );
